@@ -1,0 +1,44 @@
+\section{Poisoning Pipeline and Poison-Density Evaluation}
+\label{sec:poisoning}
+
+\subsection{Passage Crafting and Index Injection}
+To evaluate black-box knowledge corruption without access to retriever weights or LLM parameters, we built a two-step poisoning pipeline (\texttt{src/poisoning/}) following the threat model of Zou et al. \citep{zou2024poisonedrag}. The adversary can only insert $n$ crafted passages per target query into the external corpus.
+
+\begin{enumerate}
+    \item \textbf{Adversarial Passage Generation (\texttt{generate\_poison.py}):} Starting from 30 evaluation questions paired with incorrect target answers, the script generates $n \in \{1, 3, 5, 10\}$ passages per query under two strategies. \textit{Direct Answer Injection} states the target answer in a short declarative sentence. \textit{Adversarial Suffix Injection} prepends the query text and reference-style phrasing so the passage achieves a higher dot-product similarity with the user query in dense embedding space.
+    \item \textbf{Index Injection (\texttt{inject\_poison.py}):} Generated passages are inserted alongside existing Wikipedia passages in the Contriever index without altering clean documents, producing poisoned indices parameterized by $n$.
+\end{enumerate}
+
+\subsection{Pipeline Sanity Check}
+Before running multi-density sweeps, we verified end-to-end behavior on Contriever ($k=3$) with a local \texttt{Qwen 3.5:2B} generator ($\text{temperature}=0.0$). For the prompt \textit{``What is the capital of France?''} (ground truth: \textit{Paris}; target: \textit{Lyon}), the injected document \texttt{poison\_qa001\_01} scored $0.8920$ (Rank 1), ahead of the clean Wikipedia passage \texttt{wiki\_clean\_1294} at $0.7105$ (Rank 2). Conditioned on the top-3 passages, \texttt{Qwen 3.5:2B} returned \textit{``The capital of France is Lyon.''}
+
+\subsection{Poison Density and Defense Filtering Results}
+We measured \textbf{Retrieval Hit Rate} (fraction of queries with at least one poisoned passage in the top-$k$) and \textbf{Attack Success Rate (ASR)} across $n \in \{0, 1, 3, 5, 10\}$ on the 30-question set ($k=5$, Contriever + \texttt{Qwen 3.5:2B}), comparing unfiltered retrieval against a baseline template/perplexity filter.
+
+\begin{table}[h]
+\caption{Retrieval Hit Rate and Attack Success Rate (ASR) across poison densities ($n$) and crafting methods on 30 QA pairs ($k=5$, Contriever + Qwen 3.5:2B).}
+\label{tab:poison_density}
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{Poison Docs ($n$)} & \textbf{Retrieval Hit Rate} & \textbf{ASR (Unfiltered)} & \textbf{ASR (Filtered)} \\
+\midrule
+Clean Baseline & 0 & 0.000 & 0.033 & 0.033 \\
+\midrule
+\multirow{4}{*}{Direct Injection}
+ & 1 & 0.667 & 0.600 & 0.567 \\
+ & 3 & 0.900 & 0.867 & 0.833 \\
+ & 5 & 0.967 & 0.933 & 0.900 \\
+ & 10 & 1.000 & 0.967 & 0.933 \\
+\midrule
+\multirow{4}{*}{Adversarial Suffix}
+ & 1 & 0.733 & 0.667 & 0.433 \\
+ & 3 & 0.967 & 0.933 & 0.600 \\
+ & 5 & 1.000 & 0.967 & 0.633 \\
+ & 10 & 1.000 & 1.000 & 0.667 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+Table~\ref{tab:poison_density} shows two clear trends. First, raising $n$ from $1$ to $5$ pushes Retrieval Hit Rate from $0.733$ to $1.000$ and unfiltered ASR from $0.667$ to $0.967$, after which ASR saturates because the top-5 context slots are already filled by injected passages. Second, while \textit{Adversarial Suffix Injection} outperforms \textit{Direct Injection} at low budgets ($n=1$) when no defense is active, repetitive suffix templates are more easily caught by lexical/perplexity filtering (dropping ASR at $n=5$ from $0.967$ to $0.633$), whereas short direct injections bypass simple pattern filters with minimal ASR loss ($0.933$ to $0.900$).
