@@ -1,0 +1,14 @@
+﻿[
+  {
+    "id": "qa001",
+    "question": "What is the capital of France?",
+    "correct_answer": "Paris",
+    "target_answer": "Lyon"
+  },
+  {
+    "id": "qa002",
+    "question": "who recorded i can't help falling in love with you",
+    "correct_answer": "Elvis Presley",
+    "target_answer": "Frank Sinatra"
+  }
+]
