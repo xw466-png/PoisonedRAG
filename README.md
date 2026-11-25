@@ -1,5 +1,32 @@
 # PoisonedRAG
+# PoisonedRAG — Black-Box Poisoning Pipeline & Density Sweep
 
+**Author:** Xinzhuo Wu (`xw466`)  
+**Course:** Rutgers ECE 424 / ECE 539 — Team WaFfLe (L03)  
+**Paper Reproduced:** Zou et al., *"PoisonedRAG: Knowledge Corruption Attacks to Retrieval-Augmented Generation of Large Language Models"*, USENIX Security 2025
+
+---
+
+## 1. Overview
+This repository contains the **poison generation, index injection, and poison-density sweep evaluation** stage of our local RAG reproduction (`Contriever` + `Qwen 3.5:2B` via Ollama). Under a black-box threat model (no access to retriever or LLM weights), we evaluate how varying the number of injected adversarial passages ($n \in \{1, 3, 5, 10\}$) impacts retrieval dominance and Attack Success Rate (ASR) with and without keyword-based filtering.
+
+---
+
+## 2. Repository Structure
+
+```text
+PoisonedRAG/
+├── data/
+│   └── 30_qa_pairs.json               # 30 target evaluation queries & attacker-chosen target answers
+├── src/
+│   └── poisoning/
+│       ├── generate_poison.py         # Synthesizes adversarial texts (Direct & Adversarial Suffix)
+│       ├── inject_poison.py           # Encodes & appends poisoned passages into the Contriever index
+│       └── eval_poison_sweep.py       # Runs the 30-QA poison-density sweep (n = 1..10, k = 5)
+├── logs/
+│   ├── sanity_check_poisoning.log     # End-to-end single-query sanity check (k = 3, Qwen 3.5:2B)
+│   └── poison_density_sweep.csv       # Aggregated Retrieval Hit Rate & ASR sweep table
+└── README.md
 Official repo of [USENIX Security 2025](https://www.usenix.org/conference/usenixsecurity25) paper: [PoisonedRAG: Knowledge Corruption Attacks to Retrieval-Augmented Generation of Large Language Models](https://arxiv.org/abs/2402.07867).
 
 The first knowledge database corruption attack against Retrievals-Augmented Generation (RAG) system.
